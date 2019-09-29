@@ -20,6 +20,7 @@ class State:
         self.nb_moves = 0
         self.h = 0
         self.num_blockingCars = []
+        self.num_blockedCars = []
 
     """
     Constructeur d'un état à partir mouvement (c,d)
@@ -49,6 +50,27 @@ class State:
     """
     Estimation du nombre de coup restants 
     """
+
+    def find_car_on(self, x, y, rh):
+        for car in range(rh.nbcars):
+            if not rh.horiz[car]:
+                if rh.move_on[car] == y:
+                    if x <= self.pos[car] + rh.length[car] - 1 and x >= self.pos[car]:
+                        return car if car != 0 else 99
+            else:
+                if rh.move_on[car] == x:
+                    if y <= self.pos[car] + rh.length[car] - 1 and y >= self.pos[car]:
+                        return car if car != 0 else 99
+        return 0
+
+    def print_game(self, rh):
+        game = np.zeros((6, 6))
+        for x in range(6):
+            for y in range(6):
+                game[x][y] = self.find_car_on(x, y, rh)
+        return game
+
+
 
     def estimee1(self):
         """
@@ -87,28 +109,71 @@ class State:
                             blockingCars += 1
                             self.num_blockingCars.append(car)
         blocked_cars = 0
-        for car in self.num_blockingCars:
+        for car in self.num_blockedCars:
             if rh.horiz[car] == 0:
-                # print("\n\ndevant la voiture: ")
-                # print("position_x = " + str(self.pos[car] - 1))
-                # print("position_y = " + str(rh.move_on[car]))
-                # print("value = " + str(rh.free_pos[self.pos[car] - 1][rh.move_on[car]]))
-                #
-                # print("\nderrier la voiture:")
-                # print("position_x = " + str(self.pos[car] + rh.length[car]))
-                # print("position_y = " + str(rh.move_on[car]))
-                #
-                # print("value = " + str(rh.free_pos[self.pos[car] + rh.length[car]][rh.move_on[car]]))
+                if self.find_car_on(self.pos[car] - 1, rh.move_on[car], rh) !=0 and \
+                        self.find_car_on(self.pos[car] + rh.length[car], rh.move_on[car], rh) != 0:
+                    blocked_cars += 1
 
-                if not rh.free_pos[self.pos[car] - 1][rh.move_on[car]]:
-                    blocked_cars += 4
-                elif not rh.free_pos[self.pos[car] + rh.length[car]][rh.move_on[car]]:
-                    blocked_cars += 4
             else:
-                if not rh.free_pos[rh.move_on[car]][self.pos[car] - 1]:
-                    blocked_cars += 4
-                elif not rh.free_pos[rh.move_on[car]][self.pos[car] + rh.length[car]]:
-                    blocked_cars += 4
+                if self.find_car_on(rh.move_on[car], self.pos[car] - 1, rh) != 0 and \
+                        self.find_car_on(rh.move_on[car], self.pos[car] + rh.length[car], rh) != 0:
+                    blocked_cars += 1
+
+        return blocked_cars + blockingCars + 4 - self.pos[0]
+
+    def estimee4(self, rh):
+
+        # nous allons regarder si les voitures qui bloquent sont elles aussi bloquées.
+        # Si elle le sont, on ajoute 1 ou 2 à la valeur de l'heuristique
+        blockingCars = 0
+        for car in range(rh.nbcars):
+            if rh.horiz[car] == 0:
+                if rh.move_on[car] > self.pos[0] + 1:
+                    if self.pos[car] <= 2:
+                        if rh.length[car] == 3:
+                            blockingCars += 1
+                            self.num_blockingCars.append(car)
+                        elif self.pos[car] >= 1:
+                            blockingCars += 1
+                            self.num_blockingCars.append(car)
+        blocked_cars = 0
+        self.num_blockedCars = self.num_blockingCars
+        while len(self.num_blockedCars) > 0:
+            for index_car, car in enumerate(self.num_blockedCars):
+                if rh.horiz[car] == 0:
+                    # on regarde si la voiture est bloquée a gauche et a droite,
+                    # tout en faisant attention de ne pas sortir des limites de la matrice
+                    if self.find_car_on(self.pos[car] - 1, rh.move_on[car], rh) != 0 and \
+                            self.find_car_on(self.pos[car] + rh.length[car], rh.move_on[car], rh) != 0:
+                        # si elle est bien bloquée des 2 cotées:
+                        # on ajoute 1 au nombre de voiture bloqué,
+                        blocked_cars += 1
+
+                        # on check maintenant de quelle coté la voiture est bloquée,
+                        # et on ajoute la voiture qui s'y trouve a la liste des voitures a traiter
+                        if self.find_car_on(self.pos[car] - 1, rh.move_on[car], rh) != 0 and self.pos[car] - 1 >= 0:
+                            self.num_blockedCars.append(self.find_car_on(self.pos[car] - 1, rh.move_on[car], rh))
+
+                        elif self.find_car_on(self.pos[car] + rh.length[car], rh.move_on[car], rh) != 0 and \
+                                self.pos[car] + rh.length[car] <= 5:
+                            self.num_blockedCars.append(self.find_car_on(self.pos[car] + rh.length[car], rh.move_on[car], rh))
+
+                else:
+                    # de même, mais cette foit ci dans l'autre sens
+                    if self.find_car_on(rh.move_on[car], self.pos[car] - 1, rh) != 0 and \
+                            self.find_car_on(rh.move_on[car], self.pos[car] + rh.length[car], rh) != 0:
+                        blocked_cars += 1
+
+                        if self.find_car_on(rh.move_on[car], self.pos[car] - 1, rh) != 0 and self.pos[car] - 1 >= 0:
+                            self.num_blockedCars.append(self.find_car_on(rh.move_on[car], self.pos[car] - 1, rh))
+
+                        elif self.find_car_on(rh.move_on[car], self.pos[car] + rh.length[car], rh) != 0 and\
+                                self.pos[car] + rh.length[car] <= 5:
+                            self.num_blockedCars.append(self.find_car_on(rh.move_on[car], self.pos[car] + rh.length[car], rh))
+
+                # on a traité la voiture, on la supprime de la liste de voitures a traiter
+                del self.num_blockedCars[index_car]
 
         return blocked_cars + blockingCars + 4 - self.pos[0]
 

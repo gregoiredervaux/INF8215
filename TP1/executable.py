@@ -9,7 +9,7 @@ def solve46():
     s = State([1, 0, 3, 1, 1, 4, 3, 4, 4, 2, 4, 1])
     #s = rh.solve(s)
     s = rh.solve_Astar(s)
-    #rh.print_solution(s)
+    # rh.print_solution(s)
 solve46()
 print("\n--------------------------------------------\n")
 

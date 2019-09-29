@@ -3,7 +3,6 @@ from collections import deque
 import heapq
 import math
 
-from State import State
 
 class Rushhour:
 
@@ -70,7 +69,10 @@ class Rushhour:
 
         priority_queue = []
         # state.h = state.estimee1()
-        state.h = state.estimee2(self)
+        # state.h = state.estimee2(self)
+        # state.h = state.estimee3(self)
+        state.h = state.estimee4(self)
+
         heapq.heappush(priority_queue, state)
 
         # Tant que la queue n'est pas vide
@@ -83,7 +85,8 @@ class Rushhour:
                 for child in self.possible_moves(currentLeaf):
                     # child.h = child.estimee1()
                     # child.h = child.estimee2(self)
-                    child.h = child.estimee3(self)
+                    # child.h = child.estimee3(self)
+                    child.h = child.estimee4(self)
                     heapq.heappush(priority_queue, child)
                 visited.add(hash(currentLeaf))
 
@@ -105,11 +108,12 @@ class Rushhour:
 
             s.append("Voiture " + self.color[state.c] + " vers " + direction + "\n")
             s.append("voitures bloquant encore la voie: " + str(state.num_blockingCars))
+            s.append("\n" + str(state.print_game(self)))
 
             state = state.prev
 
         n = 1
         while s:
-            print(str(math.ceil(n/2)) + ". " + s.pop())
+            print(str(math.ceil(n/3)) + ". " + s.pop())
             n += 1
         return None
